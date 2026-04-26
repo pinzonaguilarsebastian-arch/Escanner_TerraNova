@@ -2,50 +2,59 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Escáner Terra Nova</title>
+    <title>Terra Nova Scanner</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background-color: #f0f4f0; padding: 20px; color: #2D5A27; }
-        .box { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; }
-        #webcam-container { margin: 20px auto; border: 4px solid #2D5A27; border-radius: 10px; overflow: hidden; width: 300px; height: 300px; }
-        button { padding: 15px 30px; background: #FFD700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        #label-container { margin-top: 20px; font-size: 20px; font-weight: bold; }
+        body { font-family: sans-serif; text-align: center; background: #f0f4f0; padding: 20px; }
+        #webcam-container { margin: 20px auto; border: 4px solid #2D5A27; width: 300px; height: 300px; background: #ccc; }
+        button { padding: 15px 25px; background: #FFD700; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h1>🌿 Escáner Terra Nova</h1>
-        <button type="button" onclick="init()">ENCENDER CÁMARA</button>
-        <div id="webcam-container"></div>
-        <div id="label-container"></div>
-    </div>
+    <h1>🌿 Escáner Terra Nova</h1>
+    <button type="button" onclick="init()">PROBAR CÁMARA</button>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@microsoft/teachablemachine-image@latest/dist/teachablemachine-image.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/teachablemachine-image@0.8/dist/teachablemachine-image.min.js"></script>
+
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/YTyc-7h11/";
         let model, webcam, labelContainer, maxPredictions;
 
         async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
-            const flip = true; 
-            webcam = new tmImage.Webcam(300, 300, flip); 
-            await webcam.setup(); 
-            await webcam.play();
-            window.requestAnimationFrame(loop);
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
-            labelContainer = document.getElementById("label-container");
-            for (let i = 0; i < maxPredictions; i++) {
-                labelContainer.appendChild(document.createElement("div"));
+            try {
+                console.log("Iniciando...");
+                const modelURL = URL + "model.json";
+                const metadataURL = URL + "metadata.json";
+
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                webcam = new tmImage.Webcam(300, 300, true); 
+                await webcam.setup(); 
+                await webcam.play();
+                
+                window.requestAnimationFrame(loop);
+
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                labelContainer = document.getElementById("label-container");
+                for (let i = 0; i < maxPredictions; i++) {
+                    labelContainer.appendChild(document.createElement("div"));
+                }
+                console.log("Cámara lista");
+            } catch (error) {
+                console.error(error);
+                alert("Error al abrir cámara: " + error.message);
             }
         }
+
         async function loop() {
             webcam.update();
             await predict();
             window.requestAnimationFrame(loop);
         }
+
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
