@@ -4,62 +4,66 @@
     <meta charset="UTF-8">
     <title>Terra Nova Scanner</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f4f0; padding: 20px; }
-        #webcam-container { margin: 20px auto; border: 4px solid #2D5A27; width: 300px; height: 300px; background: #ddd; border-radius: 10px; }
-        button { padding: 15px 30px; background: #FFD700; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 16px; }
-        #label-container { font-size: 18px; font-weight: bold; margin-top: 15px; }
+        body { font-family: sans-serif; text-align: center; background-color: #f4f4f4; padding: 20px; }
+        #webcam-container { margin: 20px auto; border: 5px solid #2D5A27; border-radius: 10px; width: 300px; height: 300px; display: inline-block; background: #000; }
+        button { padding: 15px 30px; background: #FFD700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        #label-container { margin-top: 20px; font-size: 20px; font-weight: bold; color: #2D5A27; }
+        .loading-text { color: #666; font-style: italic; }
     </style>
 </head>
 <body>
-    <h1>🌿 Escáner Terra Nova</h1>
-    <p id="status">Verificando conexión...</p>
-    <button type="button" id="btn-start" onclick="iniciar()">ENCENDER CÁMARA</button>
+    <h2>🌿 Escáner Terra Nova</h2>
+    <p id="status-text" class="loading-text">Cargando sistema...</p>
+    <button type="button" id="start-btn" onclick="init()" disabled>INICIAR ESCÁNER</button>
+    <br>
     <div id="webcam-container"></div>
     <div id="label-container"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@microsoft/teachablemachine-image@0.8.5/dist/teachablemachine-image.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
 
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/YTyc-7h11/";
         let model, webcam, labelContainer, maxPredictions;
 
-        // Verificación inmediata
-        function verificarLibrerias() {
-            if (typeof tmImage !== 'undefined') {
-                document.getElementById('status').innerText = "✅ Sistema Listo";
-                document.getElementById('status').style.color = "green";
-            } else {
-                document.getElementById('status').innerText = "❌ Error: Google no responde. Reintentando...";
-                document.getElementById('status').style.color = "red";
-                setTimeout(verificarLibrerias, 2000);
-            }
-        }
-        verificarLibrerias();
+        // Verificar carga de librerías
+        window.onload = function() {
+            const checkInterval = setInterval(() => {
+                if (typeof tmImage !== 'undefined') {
+                    document.getElementById("start-btn").disabled = false;
+                    document.getElementById("status-text").innerText = "✅ Sistema listo";
+                    clearInterval(checkInterval);
+                }
+            }, 500);
+        };
 
-        async function iniciar() {
+        async function init() {
             try {
-                document.getElementById('status').innerText = "Cargando modelo de IA...";
+                document.getElementById("status-text").innerText = "Accediendo a la cámara...";
                 const modelURL = URL + "model.json";
                 const metadataURL = URL + "metadata.json";
 
                 model = await tmImage.load(modelURL, metadataURL);
                 maxPredictions = model.getTotalClasses();
 
-                webcam = new tmImage.Webcam(300, 300, true); 
-                await webcam.setup(); 
-                await webcam.play();
+                const flip = true; 
+                webcam = new tmImage.Webcam(300, 300, flip); 
                 
+                await webcam.setup(); // Esto pedirá permiso de cámara
+                await webcam.play();
                 window.requestAnimationFrame(loop);
+
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
                 labelContainer = document.getElementById("label-container");
+                labelContainer.innerHTML = ""; // Limpiar antes de agregar
                 for (let i = 0; i < maxPredictions; i++) {
                     labelContainer.appendChild(document.createElement("div"));
                 }
-                document.getElementById('status').innerText = "Escáner Activo 🌿";
-            } catch (error) {
-                console.error(error);
-                alert("Error de acceso: Asegúrate de dar permiso a la cámara en el navegador.");
+                document.getElementById("status-text").innerText = "Escaneando en tiempo real";
+            } catch (e) {
+                console.error(e);
+                alert("Error: Asegúrate de usar HTTPS y dar permisos de cámara.");
+                document.getElementById("status-text").innerText = "❌ Error de cámara";
             }
         }
 
@@ -72,7 +76,8 @@
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
-                const classPrediction = prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(0) + "%";
+                const classPrediction =
+                    prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(0) + "%";
                 labelContainer.childNodes[i].innerHTML = classPrediction;
             }
         }
