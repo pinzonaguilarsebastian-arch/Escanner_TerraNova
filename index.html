@@ -2,20 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Terra Nova Scanner</title>
+    <title>Terra Nova Debug</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background-color: #f4f4f4; padding: 20px; }
-        #webcam-container { margin: 20px auto; border: 5px solid #2D5A27; border-radius: 10px; width: 300px; height: 300px; display: inline-block; background: #000; }
-        button { padding: 15px 30px; background: #FFD700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        #label-container { margin-top: 20px; font-size: 20px; font-weight: bold; color: #2D5A27; }
-        .loading-text { color: #666; font-style: italic; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f0f4f0; }
+        #webcam-container { margin: 10px auto; width: 300px; height: 300px; border: 3px solid #2D5A27; background: #000; }
+        button { padding: 20px; font-weight: bold; cursor: pointer; background: #FFD700; border: none; border-radius: 10px; font-size: 18px; }
+        #label-container { margin-top: 15px; font-size: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h2>🌿 Escáner Terra Nova</h2>
-    <p id="status-text" class="loading-text">Cargando sistema...</p>
-    <button type="button" id="start-btn" onclick="init()" disabled>INICIAR ESCÁNER</button>
-    <br>
+    <h1>🌿 Escáner Terra Nova</h1>
+    <p id="status">Esperando conexión con Google...</p>
+    <button type="button" onclick="init()">Cargar y Abrir Cámara</button>
     <div id="webcam-container"></div>
     <div id="label-container"></div>
 
@@ -26,44 +24,36 @@
         const URL = "https://teachablemachine.withgoogle.com/models/YTyc-7h11/";
         let model, webcam, labelContainer, maxPredictions;
 
-        // Verificar carga de librerías
-        window.onload = function() {
-            const checkInterval = setInterval(() => {
-                if (typeof tmImage !== 'undefined') {
-                    document.getElementById("start-btn").disabled = false;
-                    document.getElementById("status-text").innerText = "✅ Sistema listo";
-                    clearInterval(checkInterval);
-                }
-            }, 500);
-        };
-
         async function init() {
             try {
-                document.getElementById("status-text").innerText = "Accediendo a la cámara...";
-                const modelURL = URL + "model.json";
-                const metadataURL = URL + "metadata.json";
+                document.getElementById('status').innerText = "Cargando modelo...";
+                
+                // Verificación técnica de seguridad
+                if (typeof tmImage === 'undefined') {
+                    throw new Error("Librería tmImage no cargada. Revisa tu internet.");
+                }
 
-                model = await tmImage.load(modelURL, metadataURL);
+                model = await tmImage.load(URL + "model.json", URL + "metadata.json");
                 maxPredictions = model.getTotalClasses();
 
-                const flip = true; 
-                webcam = new tmImage.Webcam(300, 300, flip); 
+                document.getElementById('status').innerText = "Iniciando cámara...";
+                webcam = new tmImage.Webcam(300, 300, true); 
                 
-                await webcam.setup(); // Esto pedirá permiso de cámara
+                await webcam.setup(); 
                 await webcam.play();
+                
                 window.requestAnimationFrame(loop);
 
                 document.getElementById("webcam-container").appendChild(webcam.canvas);
                 labelContainer = document.getElementById("label-container");
-                labelContainer.innerHTML = ""; // Limpiar antes de agregar
                 for (let i = 0; i < maxPredictions; i++) {
                     labelContainer.appendChild(document.createElement("div"));
                 }
-                document.getElementById("status-text").innerText = "Escaneando en tiempo real";
-            } catch (e) {
-                console.error(e);
-                alert("Error: Asegúrate de usar HTTPS y dar permisos de cámara.");
-                document.getElementById("status-text").innerText = "❌ Error de cámara";
+                document.getElementById('status').innerText = "✅ Escáner en línea";
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status').innerText = "❌ ERROR: " + err.message;
+                alert("Hubo un problema: " + err.message);
             }
         }
 
@@ -76,8 +66,7 @@
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
-                const classPrediction =
-                    prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(0) + "%";
+                const classPrediction = prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(0) + "%";
                 labelContainer.childNodes[i].innerHTML = classPrediction;
             }
         }
