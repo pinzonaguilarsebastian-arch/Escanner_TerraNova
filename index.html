@@ -1,17 +1,19 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
     <meta charset="UTF-8">
     <title>Terra Nova Scanner</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #f0f4f0; padding: 20px; }
-        #webcam-container { margin: 20px auto; border: 4px solid #2D5A27; width: 300px; height: 300px; background: #ccc; }
-        button { padding: 15px 25px; background: #FFD700; border: none; font-weight: bold; cursor: pointer; }
+        #webcam-container { margin: 20px auto; border: 4px solid #2D5A27; width: 300px; height: 300px; background: #ddd; border-radius: 10px; }
+        button { padding: 15px 30px; background: #FFD700; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <h1>🌿 Escáner Terra Nova</h1>
-    <button type="button" onclick="init()">PROBAR CÁMARA</button>
+    <p id="status">Cargando inteligencia artificial...</p>
+    <button type="button" id="btn-start" onclick="iniciar()" disabled>ENCENDER CÁMARA</button>
     <div id="webcam-container"></div>
     <div id="label-container"></div>
 
@@ -22,30 +24,39 @@
         const URL = "https://teachablemachine.withgoogle.com/models/YTyc-7h11/";
         let model, webcam, labelContainer, maxPredictions;
 
-        async function init() {
+        // Función para habilitar el botón cuando todo cargue
+        window.onload = function() {
+            setTimeout(() => {
+                document.getElementById('btn-start').disabled = false;
+                document.getElementById('status').innerText = "IA Lista. Pulsa el botón.";
+            }, 2000); 
+        };
+
+        async function iniciar() {
             try {
-                console.log("Iniciando...");
                 const modelURL = URL + "model.json";
                 const metadataURL = URL + "metadata.json";
 
-                model = await tmImage.load(modelURL, metadataURL);
-                maxPredictions = model.getTotalClasses();
+                // Verificamos si la librería existe antes de llamarla
+                if (typeof tmImage !== 'undefined') {
+                    model = await tmImage.load(modelURL, metadataURL);
+                    maxPredictions = model.getTotalClasses();
 
-                webcam = new tmImage.Webcam(300, 300, true); 
-                await webcam.setup(); 
-                await webcam.play();
-                
-                window.requestAnimationFrame(loop);
-
-                document.getElementById("webcam-container").appendChild(webcam.canvas);
-                labelContainer = document.getElementById("label-container");
-                for (let i = 0; i < maxPredictions; i++) {
-                    labelContainer.appendChild(document.createElement("div"));
+                    webcam = new tmImage.Webcam(300, 300, true); 
+                    await webcam.setup(); 
+                    await webcam.play();
+                    
+                    window.requestAnimationFrame(loop);
+                    document.getElementById("webcam-container").appendChild(webcam.canvas);
+                    labelContainer = document.getElementById("label-container");
+                    for (let i = 0; i < maxPredictions; i++) {
+                        labelContainer.appendChild(document.createElement("div"));
+                    }
+                } else {
+                    alert("Las librerías de Google aún no cargan. Refresca la página.");
                 }
-                console.log("Cámara lista");
             } catch (error) {
-                console.error(error);
-                alert("Error al abrir cámara: " + error.message);
+                alert("Error de cámara: " + error.message);
             }
         }
 
