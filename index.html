@@ -8,21 +8,21 @@
         :root { --primary: #2D5A27; --accent: #FFD700; --bg: #f4f7f4; --dark: #333; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: var(--dark); text-align: center; }
         
-        /* Navegación */
+        /* Navegación de Pantallas */
         .view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100vh; }
         .active { display: flex; animation: fadeIn 0.2s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Componentes */
+        /* Estilos de Interfaz */
         .menu-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 85%; max-width: 350px; margin: 15px 0; cursor: pointer; border: 2px solid transparent; }
         .menu-card:hover { border-color: var(--primary); }
         .btn-action { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; width: 250px; margin: 10px; cursor: pointer; }
         .score-badge { background: var(--accent); padding: 10px 25px; border-radius: 50px; font-weight: bold; font-size: 1.5rem; margin: 20px; border: 2px solid #555; }
 
-        /* Contenedores IA */
+        /* Contenedores de IA */
         #webcam-container, #preview-container { width: 300px; height: 300px; border: 5px solid var(--primary); border-radius: 20px; background: #000; overflow: hidden; margin: 20px 0; }
         #img-preview { width: 100%; height: 100%; object-fit: cover; }
-        #res-label { font-size: 1.4rem; font-weight: bold; min-height: 4em; padding: 15px; display: flex; flex-direction: column; justify-content: center; background: white; border-radius: 15px; width: 85%; max-width: 320px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        #res-label { font-size: 1.5rem; font-weight: bold; min-height: 3em; padding: 15px; display: flex; flex-direction: column; justify-content: center; background: white; border-radius: 15px; width: 85%; max-width: 320px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -32,18 +32,18 @@
         <div class="score-badge">Puntos: <span id="puntos-val">0</span></div>
         <div class="menu-card" onclick="showView('view-escaner', true)">
             <h3>🔍 Escáner Rápido</h3>
-            <p>Identificación instantánea de residuos.</p>
+            <p>Identificación instantánea.</p>
         </div>
         <div class="menu-card" onclick="showView('view-puntos')">
             <h3>🏆 Validar Evidencia</h3>
-            <p>Captura tu acción y suma puntos.</p>
+            <p>Suma puntos a tu perfil.</p>
         </div>
     </div>
 
     <div id="view-escaner" class="view">
         <button class="btn-action" style="background:#666" onclick="stopWebcam()">⬅ VOLVER</button>
         <div id="webcam-container"></div>
-        <div id="res-label">Cargando modelo...</div>
+        <div id="res-label">Cargando cámara...</div>
     </div>
 
     <div id="view-puntos" class="view">
@@ -60,7 +60,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
     <script>
-        // Configuración Firebase (Tus datos de Los Andes)
+        // CONFIGURACIÓN FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBkhSSJf--g82qC5JzJ6Eo8T2TndoZG2XY",
             authDomain: "eas---terranova.firebaseapp.com",
@@ -76,7 +76,7 @@
         const URL = "https://teachablemachine.withgoogle.com/models/0HJIR3EIH/";
         let model, webcam, puntos;
 
-        puntos = parseInt(localStorage.getItem('terra_pts_v4')) || 0;
+        puntos = parseInt(localStorage.getItem('terra_pts_final')) || 0;
         document.getElementById("puntos-val").innerText = puntos;
 
         async function initIA() {
@@ -107,6 +107,7 @@
             }
         }
 
+        // --- ESCÁNER RÁPIDO SIN "DE SEGURIDAD" ---
         async function predictCam() {
             const prediction = await model.predict(webcam.canvas);
             let top = { className: "", probability: 0 };
@@ -114,31 +115,18 @@
 
             const label = document.getElementById("res-label");
             
-            let color = "#666";
-            let canecaTexto = "";
-
-            // Lógica de clasificación visual
-            if (top.className === "Aprovechables") {
-                canecaTexto = "⬜ CANECA BLANCA";
-                color = "#222";
-            } else if (top.className === "No aprovechables") {
-                canecaTexto = "⬛ CANECA NEGRA";
-                color = "black";
-            } else if (top.className === "Orgánicos") {
-                canecaTexto = "🟩 CANECA VERDE";
-                color = "green";
-            } else if (top.className === "Desconocidos") {
-                canecaTexto = "❌ NO SE RECONOCIÓ EL RESIDUO";
-                color = "#d93025"; // Rojo para indicar que no es válido
+            if (top.className === "Desconocidos") {
+                label.innerHTML = `<span style="color:#d93025">❌ RESIDUO NO RECONOCIDO</span>`;
+            } 
+            else {
+                let txt = "";
+                let col = "";
+                if (top.className === "Aprovechables") { txt = "⬜ CANECA BLANCA"; col = "#222"; }
+                else if (top.className === "No aprovechables") { txt = "⬛ CANECA NEGRA"; col = "black"; }
+                else if (top.className === "Orgánicos") { txt = "🟩 CANECA VERDE"; col = "green"; }
+                
+                label.innerHTML = `<div style="color: ${col}">${txt}</div>`;
             }
-
-            // Mostrar resultado con porcentaje siempre visible
-            label.innerHTML = `
-                <div style="color: ${color}; font-size: 1.4rem; margin-bottom: 5px;">${canecaTexto}</div>
-                <div style="font-size: 1rem; color: #777; font-weight: normal;">
-                    Seguridad: ${(top.probability * 100).toFixed(0)}%
-                </div>
-            `;
         }
 
         function stopWebcam() { if(webcam) webcam.stop(); showView('view-inicio'); }
@@ -164,16 +152,16 @@
             prediction.forEach(p => { if(p.probability > top.probability) top = p; });
 
             if (top.className === "Desconocidos") {
-                alert("❌ No se puede validar: El objeto no es un residuo reconocido.");
-            } else if (top.probability > 0.80) {
+                alert("❌ No se reconoce como residuo válido.");
+            } else if (top.probability > 0.75) {
                 puntos += 10;
-                localStorage.setItem('terra_pts_v4', puntos);
+                localStorage.setItem('terra_pts_final', puntos);
                 document.getElementById("puntos-val").innerText = puntos;
                 db.collection("ranking").add({ residuo: top.className, fecha: new Date(), puntos: 10 });
-                alert(`✅ ¡Excelente! Clasificado como ${top.className}. Ganaste 10 puntos.`);
+                alert(`✅ +10 Puntos: ${top.className}`);
                 showView('view-inicio');
             } else {
-                alert("⚠️ La imagen no es clara. Por favor intenta de nuevo.");
+                alert("⚠️ Imagen poco clara. Intenta de nuevo.");
             }
         }
     </script>
