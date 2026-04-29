@@ -5,21 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terra Nova | Uniandes</title>
     <style>
-        :root { --primary: #2D5A27; --accent: #FFD700; --bg: #f4f7f4; --dark: #333; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: var(--dark); text-align: center; }
-        
+        :root { --primary: #2D5A27; --accent: #FFD700; --bg: #f4f7f4; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; text-align: center; }
         .view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100vh; }
-        .active { display: flex; animation: fadeIn 0.2s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .menu-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 85%; max-width: 350px; margin: 15px 0; cursor: pointer; border: 2px solid transparent; }
-        .menu-card:hover { border-color: var(--primary); }
+        .active { display: flex; }
+        .menu-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 85%; max-width: 350px; margin: 15px 0; cursor: pointer; }
         .btn-action { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; width: 250px; margin: 10px; cursor: pointer; }
-        .score-badge { background: var(--accent); padding: 10px 25px; border-radius: 50px; font-weight: bold; font-size: 1.5rem; margin: 20px; border: 2px solid #555; }
-
-        #webcam-container, #preview-container { width: 300px; height: 300px; border: 5px solid var(--primary); border-radius: 20px; background: #000; overflow: hidden; margin: 20px 0; }
-        #img-preview { width: 100%; height: 100%; object-fit: cover; }
-        #res-label { font-size: 1.5rem; font-weight: bold; min-height: 4em; padding: 15px; display: flex; flex-direction: column; justify-content: center; background: white; border-radius: 15px; width: 85%; max-width: 320px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .score-badge { background: var(--accent); padding: 10px 25px; border-radius: 50px; font-weight: bold; font-size: 1.5rem; margin: 20px; }
+        #webcam-container { width: 300px; height: 300px; border: 5px solid var(--primary); border-radius: 20px; overflow: hidden; margin: 20px 0; }
+        #res-label { font-size: 1.5rem; font-weight: bold; min-height: 4em; padding: 15px; background: white; border-radius: 15px; width: 85%; max-width: 320px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -27,28 +21,22 @@
     <div id="view-inicio" class="view active">
         <h1 style="margin-top:40px">🌿 Terra Nova</h1>
         <div class="score-badge">Puntos: <span id="puntos-val">0</span></div>
-        <div class="menu-card" onclick="showView('view-escaner', true)">
-            <h3>🔍 Escáner Rápido</h3>
-            <p>Identificación en tiempo real.</p>
-        </div>
-        <div class="menu-card" onclick="showView('view-puntos')">
-            <h3>🏆 Validar Evidencia</h3>
-            <p>Suma puntos a tu perfil.</p>
-        </div>
+        <div class="menu-card" onclick="showView('view-escaner', true)"><h3>🔍 Escáner Rápido</h3></div>
+        <div class="menu-card" onclick="showView('view-puntos')"><h3>🏆 Sumar Puntos</h3></div>
     </div>
 
     <div id="view-escaner" class="view">
         <button class="btn-action" style="background:#666" onclick="stopWebcam()">⬅ VOLVER</button>
         <div id="webcam-container"></div>
-        <div id="res-label">Cargando cámara...</div>
+        <div id="res-label">Iniciando...</div>
     </div>
 
     <div id="view-puntos" class="view">
         <button class="btn-action" style="background:#666" onclick="showView('view-inicio')">⬅ VOLVER</button>
-        <div id="preview-container"><img id="img-preview" style="display:none"></div>
+        <div id="preview-container"><img id="img-preview" style="width:300px; display:none; border-radius:20px;"></div>
         <input type="file" id="file-input" accept="image/*" onchange="previewImg(this)" style="display:none">
         <button class="btn-action" onclick="document.getElementById('file-input').click()">📸 TOMAR FOTO</button>
-        <button id="btn-validate" class="btn-action" style="background:var(--accent); color:black; display:none" onclick="validarEvidencia()">CONFIRMAR</button>
+        <button id="btn-validate" class="btn-action" style="background:var(--accent); color:black; display:none" onclick="validarEvidencia()">VALIDAR</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -72,7 +60,7 @@
         const URL = "https://teachablemachine.withgoogle.com/models/0HJIR3EIH/";
         let model, webcam, puntos;
 
-        puntos = parseInt(localStorage.getItem('terra_pts_final')) || 0;
+        puntos = parseInt(localStorage.getItem('terra_pts_v5')) || 0;
         document.getElementById("puntos-val").innerText = puntos;
 
         async function initIA() {
@@ -103,37 +91,40 @@
             }
         }
 
-        // --- LÓGICA DE ESCÁNER CORREGIDA ---
+        // --- ESTA ES LA FUNCIÓN CRÍTICA CORREGIDA ---
         async function predictCam() {
             const prediction = await model.predict(webcam.canvas);
             let top = { className: "", probability: 0 };
-            prediction.forEach(p => { if(p.probability > top.probability) top = p; });
+            
+            // 1. Encontrar el ganador absoluto
+            prediction.forEach(p => {
+                if(p.probability > top.probability) top = p;
+            });
 
             const label = document.getElementById("res-label");
-            
-            let displayTxt = "";
-            let color = "#666";
+            let canecaNombre = "ANALIZANDO...";
+            let colorHex = "#666";
 
-            // Asignamos el nombre de la caneca y el color según la clase ganadora
+            // 2. Asignación directa sin fallos
             if (top.className === "Aprovechables") {
-                displayTxt = "⬜ CANECA BLANCA";
-                color = "#222";
+                canecaNombre = "⬜ CANECA BLANCA";
+                colorHex = "#222";
             } else if (top.className === "No aprovechables") {
-                displayTxt = "⬛ CANECA NEGRA";
-                color = "black";
+                canecaNombre = "⬛ CANECA NEGRA";
+                colorHex = "black";
             } else if (top.className === "Orgánicos") {
-                displayTxt = "🟩 CANECA VERDE";
-                color = "green";
-            } else if (top.className === "Desconocidos") {
-                displayTxt = "❌ RESIDUO DESCONOCIDO";
-                color = "#d93025";
+                canecaNombre = "🟩 CANECA VERDE";
+                colorHex = "green";
+            } else {
+                canecaNombre = "❌ NO RECONOCIDO";
+                colorHex = "#d93025";
             }
 
-            // Mostramos TODO: El nombre de la caneca y el porcentaje para que no falle
+            // 3. Renderizado forzoso (Nombre + Porcentaje siempre juntos)
             label.innerHTML = `
-                <div style="color: ${color}; margin-bottom: 5px;">${displayTxt}</div>
-                <div style="font-size: 0.9rem; color: #888; font-weight: normal;">
-                    Confianza: ${(top.probability * 100).toFixed(0)}%
+                <div style="color: ${colorHex}; font-size: 1.4rem;">${canecaNombre}</div>
+                <div style="font-size: 1rem; color: #888; font-weight: normal; margin-top:5px;">
+                    ${(top.probability * 100).toFixed(0)}% de seguridad
                 </div>
             `;
         }
@@ -161,16 +152,14 @@
             prediction.forEach(p => { if(p.probability > top.probability) top = p; });
 
             if (top.className === "Desconocidos") {
-                alert("❌ No se puede validar un residuo desconocido.");
-            } else if (top.probability > 0.70) {
+                alert("No se reconoce el residuo.");
+            } else {
                 puntos += 10;
-                localStorage.setItem('terra_pts_final', puntos);
+                localStorage.setItem('terra_pts_v5', puntos);
                 document.getElementById("puntos-val").innerText = puntos;
                 db.collection("ranking").add({ residuo: top.className, fecha: new Date(), puntos: 10 });
-                alert(`✅ +10 Puntos: ${top.className}`);
+                alert("¡Puntos sumados!");
                 showView('view-inicio');
-            } else {
-                alert("⚠️ Imagen poco clara. Intenta de nuevo.");
             }
         }
     </script>
