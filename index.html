@@ -3,58 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terra Nova App</title>
+    <title>Terra Nova | Uniandes</title>
     <style>
-        :root { --primary: #2D5A27; --accent: #FFD700; --white: #ffffff; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f0; margin: 0; text-align: center; }
+        :root { --primary: #2D5A27; --accent: #FFD700; --bg: #f0f4f0; --dark: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; color: var(--dark); text-align: center; }
         
-        /* Contenedores de Pantallas */
-        .view { display: none; padding: 20px; animation: fadeIn 0.4s; }
-        .active { display: block; }
+        /* Sistema de Pantallas */
+        .view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100vh; }
+        .active { display: flex; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Botones y Estilo */
-        .btn-menu { background: var(--primary); color: white; border: none; padding: 20px; margin: 10px; border-radius: 15px; width: 80%; max-width: 300px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
-        .btn-back { background: #666; color: white; border: none; padding: 10px; border-radius: 8px; margin-bottom: 20px; cursor: pointer; }
-        
-        #webcam-container, #preview-container { margin: 15px auto; width: 300px; height: 300px; border: 4px solid var(--primary); border-radius: 15px; background: #000; overflow: hidden; }
-        .score-badge { background: var(--accent); padding: 10px 20px; border-radius: 50px; font-weight: bold; display: inline-block; margin: 10px; }
-        #res-label { font-size: 1.5rem; font-weight: bold; margin-top: 15px; }
+        /* Tarjetas y Botones */
+        .menu-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 85%; max-width: 350px; margin: 15px 0; cursor: pointer; border: 2px solid transparent; transition: 0.3s; }
+        .menu-card:hover { border-color: var(--primary); transform: translateY(-3px); }
+        .btn-action { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; width: 250px; margin: 10px; cursor: pointer; }
+        .score-badge { background: var(--accent); padding: 10px 25px; border-radius: 50px; font-weight: bold; font-size: 1.5rem; margin: 20px; border: 2px solid #555; }
+
+        /* Contenedores de Media */
+        #webcam-container, #preview-container { width: 300px; height: 300px; border: 5px solid var(--primary); border-radius: 20px; background: #000; overflow: hidden; margin: 20px 0; position: relative; }
+        #img-preview { width: 100%; height: 100%; object-fit: cover; }
+        #res-label { font-size: 1.4rem; font-weight: bold; min-height: 2.5em; padding: 10px; }
     </style>
 </head>
 <body>
 
     <div id="view-inicio" class="view active">
-        <br><h1>🌿 Terra Nova</h1>
-        <p>¿Qué quieres hacer hoy?</p>
-        <button class="btn-menu" onclick="showView('view-escaner', true)">🔍 ESCÁNER RÁPIDO<br><small>Saber dónde va el residuo</small></button>
-        <button class="btn-menu" onclick="showView('view-puntos')">🏆 SUBIR EVIDENCIA<br><small>Sumar puntos en Firebase</small></button>
+        <h1 style="margin-top:40px">🌿 Terra Nova</h1>
+        <p>Hacia un campus sostenible</p>
+        <div class="score-badge">Mis Puntos: <span id="puntos-val">0</span></div>
+        
+        <div class="menu-card" onclick="showView('view-escaner', true)">
+            <h3>🔍 Escáner Rápido</h3>
+            <p>Identifica la caneca en tiempo real.</p>
+        </div>
+
+        <div class="menu-card" onclick="showView('view-puntos')">
+            <h3>🏆 Validar Evidencia</h3>
+            <p>Sube una foto y suma +10 puntos.</p>
+        </div>
     </div>
 
     <div id="view-escaner" class="view">
-        <button class="btn-back" onclick="stopWebcam()">⬅ Volver</button>
-        <h2>Escáner en Vivo</h2>
+        <button class="btn-action" style="background:#666" onclick="stopWebcam()">⬅ VOLVER</button>
         <div id="webcam-container"></div>
-        <div id="res-label">Iniciando...</div>
+        <div id="res-label">Iniciando IA...</div>
     </div>
 
     <div id="view-puntos" class="view">
-        <button class="btn-back" onclick="showView('view-inicio')">⬅ Volver</button>
-        <div class="score-badge">Tus Puntos: <span id="puntos-val">0</span></div>
-        <h2>Sube tu Evidencia</h2>
+        <button class="btn-action" style="background:#666" onclick="showView('view-inicio')">⬅ VOLVER</button>
+        <div id="preview-container"><img id="img-preview" style="display:none"></div>
         <input type="file" id="file-input" accept="image/*" onchange="previewImg(this)" style="display:none">
-        <button class="btn-menu" onclick="document.getElementById('file-input').click()">📸 TOMAR/SUBIR FOTO</button>
-        <div id="preview-container"><img id="img-preview" style="width:100%; display:none"></div>
-        <button id="btn-validate" class="btn-menu" style="background:var(--accent); color:black; display:none" onclick="validarEvidencia()">VALIDAR Y SUMAR +10</button>
+        <button class="btn-action" onclick="document.getElementById('file-input').click()">📸 CARGAR FOTOGRAFÍA</button>
+        <button id="btn-validate" class="btn-action" style="background:var(--accent); color:black; display:none" onclick="validarEvidencia()">CONFIRMAR Y SUMAR</button>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
     <script>
-        // --- CONFIGURACIÓN FIREBASE ---
+        // 1. FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyBkhSSJf--g82qC5JzJ6Eo8T2TndoZG2XY",
             authDomain: "eas---terranova.firebaseapp.com",
@@ -64,54 +73,74 @@
             appId: "1:278692618578:web:804363f773a2cc6f349a8b",
             measurementId: "G-7P9CTHC8E4"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const URL = "https://teachablemachine.withgoogle.com/models/YTyc-7h11/";
-        let model, webcam, puntos = 0;
+        // 2. MODELO E INICIALIZACIÓN
+        const URL = "https://teachablemachine.withgoogle.com/models/0HJIR3EIH/";
+        let model, webcam, puntos;
+
+        // Cargar puntos persistentes
+        puntos = parseInt(localStorage.getItem('terra_pts_v2')) || 0;
+        document.getElementById("puntos-val").innerText = puntos;
 
         async function initIA() {
             model = await tmImage.load(URL + "model.json", URL + "metadata.json");
         }
         initIA();
 
-        // Navegación
-        function showView(viewId, startCam = false) {
+        function showView(id, cam = false) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            if (startCam) initWebcam();
+            document.getElementById(id).classList.add('active');
+            if (cam) startWebcam();
         }
 
-        // Lógica de Cámara (Escáner Libre)
-        async function initWebcam() {
-            webcam = new tmImage.Webcam(300, 300, false);
+        // 3. ESCÁNER EN VIVO
+        async function startWebcam() {
+            webcam = new tmImage.Webcam(300, 300, true);
             await webcam.setup();
             await webcam.play();
+            document.getElementById("webcam-container").innerHTML = "";
             document.getElementById("webcam-container").appendChild(webcam.canvas);
-            window.requestAnimationFrame(updateCam);
+            window.requestAnimationFrame(loop);
         }
 
-        async function updateCam() {
+        async function loop() {
             if (webcam && webcam.canvas) {
                 webcam.update();
-                const prediction = await model.predict(webcam.canvas);
-                let top = { className: "", probability: 0 };
-                prediction.forEach(p => { if(p.probability > top.probability) top = p; });
-                
-                const label = document.getElementById("res-label");
-                label.innerText = top.className + " (" + (top.probability * 100).toFixed(0) + "%)";
-                label.style.color = top.className === "Orgánicos" ? "green" : (top.className === "Aprovechables" ? "blue" : "black");
-                
-                window.requestAnimationFrame(updateCam);
+                await predictCam();
+                window.requestAnimationFrame(loop);
             }
         }
 
-        function stopWebcam() {
-            if (webcam) { webcam.stop(); webcam = null; }
-            showView('view-inicio');
+        async function predictCam() {
+            const prediction = await model.predict(webcam.canvas);
+            let top = { className: "", probability: 0 };
+            prediction.forEach(p => { if(p.probability > top.probability) top = p; });
+
+            const label = document.getElementById("res-label");
+            
+            // Lógica con la clase "Desconocidos"
+            if (top.className === "Desconocidos") {
+                label.innerText = "Esperando residuo...";
+                label.style.color = "gray";
+            } 
+            else if (top.probability < 0.75) {
+                label.innerText = "Escaneando...";
+                label.style.color = "gray";
+            }
+            else {
+                let txt = "";
+                if (top.className === "Aprovechables") { txt = "⬜ CANECA BLANCA"; label.style.color = "#333"; }
+                if (top.className === "No aprovechables") { txt = "⬛ CANECA NEGRA"; label.style.color = "black"; }
+                if (top.className === "Orgánicos") { txt = "🟩 CANECA VERDE"; label.style.color = "green"; }
+                label.innerHTML = `${txt}<br><small>${(top.probability*100).toFixed(0)}% de seguridad</small>`;
+            }
         }
 
-        // Lógica de Puntos (Evidencia)
+        function stopWebcam() { if(webcam) webcam.stop(); showView('view-inicio'); }
+
+        // 4. VALIDACIÓN DE EVIDENCIA
         function previewImg(input) {
             const file = input.files[0];
             if (file) {
@@ -132,14 +161,26 @@
             let top = { className: "", probability: 0 };
             prediction.forEach(p => { if(p.probability > top.probability) top = p; });
 
-            if (top.probability > 0.7) {
+            // Solo sumamos puntos si NO es desconocido y tiene buena probabilidad
+            if (top.className === "Desconocidos") {
+                alert("❌ La IA no reconoce esto como un residuo válido.");
+            } 
+            else if (top.probability > 0.85) {
                 puntos += 10;
+                localStorage.setItem('terra_pts_v2', puntos);
                 document.getElementById("puntos-val").innerText = puntos;
-                db.collection("ranking").add({ residuo: top.className, pts: 10, fecha: new Date() });
-                alert("¡Puntos guardados en Firebase! Detectado: " + top.className);
+
+                // Guardar en Firebase
+                db.collection("ranking").add({
+                    residuo: top.className,
+                    fecha: new Date(),
+                    puntos: 10
+                });
+
+                alert(`✅ ¡Excelente! Detectado: ${top.className}. Has ganado 10 puntos.`);
                 showView('view-inicio');
             } else {
-                alert("La IA no está segura. Intenta otra foto.");
+                alert("⚠️ La imagen no es lo suficientemente clara. ¡Intenta de nuevo!");
             }
         }
     </script>
