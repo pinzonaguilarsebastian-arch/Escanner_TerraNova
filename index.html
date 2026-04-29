@@ -8,52 +8,52 @@
         :root { --primary: #2D5A27; --accent: #FFD700; --bg: #f4f7f4; --dark: #333; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: var(--dark); text-align: center; }
         
-        /* Sistema de Navegación */
+        /* Sistema de Vistas */
         .view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100vh; }
         .active { display: flex; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Componentes de UI */
+        /* UI Components */
         .menu-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 85%; max-width: 350px; margin: 15px 0; cursor: pointer; transition: 0.3s; border: 2px solid transparent; }
         .menu-card:hover { border-color: var(--primary); transform: translateY(-3px); }
         .btn-action { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; width: 250px; margin: 10px; cursor: pointer; }
         .score-badge { background: var(--accent); padding: 10px 25px; border-radius: 50px; font-weight: bold; font-size: 1.5rem; margin: 20px; border: 2px solid #555; }
 
-        /* Contenedores de Cámara e Imagen */
+        /* Cámara y Etiquetas */
         #webcam-container, #preview-container { width: 300px; height: 300px; border: 5px solid var(--primary); border-radius: 20px; background: #000; overflow: hidden; margin: 20px 0; position: relative; }
         #img-preview { width: 100%; height: 100%; object-fit: cover; }
-        #res-label { font-size: 1.4rem; font-weight: bold; min-height: 3em; padding: 10px; display: flex; flex-direction: column; justify-content: center; }
+        #res-label { font-size: 1.4rem; font-weight: bold; min-height: 3.5em; padding: 10px; display: flex; flex-direction: column; justify-content: center; background: white; border-radius: 15px; width: 85%; max-width: 320px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
 
     <div id="view-inicio" class="view active">
         <h1 style="margin-top:40px">🌿 Terra Nova</h1>
-        <div class="score-badge">Mis Puntos: <span id="puntos-val">0</span></div>
+        <div class="score-badge">Puntos: <span id="puntos-val">0</span></div>
         
         <div class="menu-card" onclick="showView('view-escaner', true)">
             <h3>🔍 Escáner Rápido</h3>
-            <p>Identifica la caneca correcta en tiempo real.</p>
+            <p>Mira la caneca correcta al instante.</p>
         </div>
 
         <div class="menu-card" onclick="showView('view-puntos')">
             <h3>🏆 Validar Evidencia</h3>
-            <p>Sube una foto y suma +10 puntos a tu cuenta.</p>
+            <p>Suma +10 puntos con una foto.</p>
         </div>
     </div>
 
     <div id="view-escaner" class="view">
-        <button class="btn-action" style="background:#666" onclick="stopWebcam()">⬅ VOLVER AL MENÚ</button>
+        <button class="btn-action" style="background:#666" onclick="stopWebcam()">⬅ VOLVER</button>
         <div id="webcam-container"></div>
-        <div id="res-label">Iniciando IA...</div>
+        <div id="res-label">Iniciando cámara...</div>
     </div>
 
     <div id="view-puntos" class="view">
-        <button class="btn-action" style="background:#666" onclick="showView('view-inicio')">⬅ VOLVER AL MENÚ</button>
+        <button class="btn-action" style="background:#666" onclick="showView('view-inicio')">⬅ VOLVER</button>
         <div id="preview-container"><img id="img-preview" style="display:none"></div>
         <input type="file" id="file-input" accept="image/*" onchange="previewImg(this)" style="display:none">
-        <button class="btn-action" onclick="document.getElementById('file-input').click()">📸 TOMAR/CARGAR FOTO</button>
-        <button id="btn-validate" class="btn-action" style="background:var(--accent); color:black; display:none" onclick="validarEvidencia()">CONFIRMAR Y SUMAR PUNTOS</button>
+        <button class="btn-action" onclick="document.getElementById('file-input').click()">📸 CARGAR FOTO</button>
+        <button id="btn-validate" class="btn-action" style="background:var(--accent); color:black; display:none" onclick="validarEvidencia()">VALIDAR</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -62,7 +62,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
     <script>
-        // 1. CONFIGURACIÓN DE FIREBASE
+        // FIREBASE CONFIG (Tus credenciales de Uniandes)
         const firebaseConfig = {
             apiKey: "AIzaSyBkhSSJf--g82qC5JzJ6Eo8T2TndoZG2XY",
             authDomain: "eas---terranova.firebaseapp.com",
@@ -75,12 +75,10 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 2. MODELO E INICIALIZACIÓN
         const URL = "https://teachablemachine.withgoogle.com/models/0HJIR3EIH/";
         let model, webcam, puntos;
 
-        // Cargar puntos guardados (Persistencia)
-        puntos = parseInt(localStorage.getItem('terra_pts_v2')) || 0;
+        puntos = parseInt(localStorage.getItem('terra_pts_v4')) || 0;
         document.getElementById("puntos-val").innerText = puntos;
 
         async function initIA() {
@@ -89,4 +87,87 @@
         initIA();
 
         function showView(id, cam = false) {
-            document.querySelectorAll('.view').forEach(v => v.classList.
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (cam) startWebcam();
+        }
+
+        async function startWebcam() {
+            webcam = new tmImage.Webcam(300, 300, true);
+            await webcam.setup();
+            await webcam.play();
+            document.getElementById("webcam-container").innerHTML = "";
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            window.requestAnimationFrame(loop);
+        }
+
+        async function loop() {
+            if (webcam && webcam.canvas) {
+                webcam.update();
+                await predictCam();
+                window.requestAnimationFrame(loop);
+            }
+        }
+
+        // LÓGICA DE ESCÁNER SOLICITADA
+        async function predictCam() {
+            const prediction = await model.predict(webcam.canvas);
+            let top = { className: "", probability: 0 };
+            prediction.forEach(p => { if(p.probability > top.probability) top = p; });
+
+            const label = document.getElementById("res-label");
+
+            // Si es Desconocido, funciona como "limpiador" inmediato
+            if (top.className === "Desconocidos") {
+                label.innerHTML = `<span style="color:gray">Buscando residuo...</span>`;
+            } 
+            else {
+                let caneca = "";
+                let color = "";
+                if (top.className === "Aprovechables") { caneca = "⬜ CANECA BLANCA"; color = "#333"; }
+                else if (top.className === "No aprovechables") { caneca = "⬛ CANECA NEGRA"; color = "black"; }
+                else if (top.className === "Orgánicos") { caneca = "🟩 CANECA VERDE"; color = "green"; }
+
+                label.innerHTML = `
+                    <div style="color: ${color}; font-size: 1.6rem;">${caneca}</div>
+                    <div style="font-size: 1rem; color: #666;">${(top.probability * 100).toFixed(0)}% de seguridad</div>
+                `;
+            }
+        }
+
+        function stopWebcam() { if(webcam) webcam.stop(); showView('view-inicio'); }
+
+        function previewImg(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.getElementById("img-preview");
+                    img.src = e.target.result;
+                    img.style.display = "block";
+                    document.getElementById("btn-validate").style.display = "block";
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function validarEvidencia() {
+            const img = document.getElementById("img-preview");
+            const prediction = await model.predict(img);
+            let top = { className: "", probability: 0 };
+            prediction.forEach(p => { if(p.probability > top.probability) top = p; });
+
+            if (top.className === "Desconocidos" || top.probability < 0.80) {
+                alert("❌ No se reconoce un residuo válido.");
+            } else {
+                puntos += 10;
+                localStorage.setItem('terra_pts_v4', puntos);
+                document.getElementById("puntos-val").innerText = puntos;
+                db.collection("ranking").add({ residuo: top.className, fecha: new Date(), puntos: 10 });
+                alert(`✅ +10 Puntos: ${top.className}`);
+                showView('view-inicio');
+            }
+        }
+    </script>
+</body>
+</html>
