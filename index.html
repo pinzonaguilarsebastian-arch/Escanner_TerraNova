@@ -8,21 +8,21 @@
         :root { --primary: #2D5A27; --accent: #FFD700; --bg: #f4f7f4; --dark: #333; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: var(--dark); text-align: center; }
         
-        /* Sistema de Vistas */
+        /* Navegación */
         .view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100vh; }
-        .active { display: flex; animation: fadeIn 0.3s ease; }
+        .active { display: flex; animation: fadeIn 0.2s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* UI Components */
-        .menu-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 85%; max-width: 350px; margin: 15px 0; cursor: pointer; transition: 0.3s; border: 2px solid transparent; }
-        .menu-card:hover { border-color: var(--primary); transform: translateY(-3px); }
+        /* Componentes */
+        .menu-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 85%; max-width: 350px; margin: 15px 0; cursor: pointer; border: 2px solid transparent; }
+        .menu-card:hover { border-color: var(--primary); }
         .btn-action { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 10px; font-weight: bold; width: 250px; margin: 10px; cursor: pointer; }
         .score-badge { background: var(--accent); padding: 10px 25px; border-radius: 50px; font-weight: bold; font-size: 1.5rem; margin: 20px; border: 2px solid #555; }
 
-        /* Cámara y Etiquetas */
-        #webcam-container, #preview-container { width: 300px; height: 300px; border: 5px solid var(--primary); border-radius: 20px; background: #000; overflow: hidden; margin: 20px 0; position: relative; }
+        /* Contenedores IA */
+        #webcam-container, #preview-container { width: 300px; height: 300px; border: 5px solid var(--primary); border-radius: 20px; background: #000; overflow: hidden; margin: 20px 0; }
         #img-preview { width: 100%; height: 100%; object-fit: cover; }
-        #res-label { font-size: 1.4rem; font-weight: bold; min-height: 3.5em; padding: 10px; display: flex; flex-direction: column; justify-content: center; background: white; border-radius: 15px; width: 85%; max-width: 320px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        #res-label { font-size: 1.4rem; font-weight: bold; min-height: 4em; padding: 15px; display: flex; flex-direction: column; justify-content: center; background: white; border-radius: 15px; width: 85%; max-width: 320px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
@@ -30,30 +30,28 @@
     <div id="view-inicio" class="view active">
         <h1 style="margin-top:40px">🌿 Terra Nova</h1>
         <div class="score-badge">Puntos: <span id="puntos-val">0</span></div>
-        
         <div class="menu-card" onclick="showView('view-escaner', true)">
             <h3>🔍 Escáner Rápido</h3>
-            <p>Mira la caneca correcta al instante.</p>
+            <p>Identificación instantánea de residuos.</p>
         </div>
-
         <div class="menu-card" onclick="showView('view-puntos')">
             <h3>🏆 Validar Evidencia</h3>
-            <p>Suma +10 puntos con una foto.</p>
+            <p>Captura tu acción y suma puntos.</p>
         </div>
     </div>
 
     <div id="view-escaner" class="view">
         <button class="btn-action" style="background:#666" onclick="stopWebcam()">⬅ VOLVER</button>
         <div id="webcam-container"></div>
-        <div id="res-label">Iniciando cámara...</div>
+        <div id="res-label">Cargando modelo...</div>
     </div>
 
     <div id="view-puntos" class="view">
         <button class="btn-action" style="background:#666" onclick="showView('view-inicio')">⬅ VOLVER</button>
         <div id="preview-container"><img id="img-preview" style="display:none"></div>
         <input type="file" id="file-input" accept="image/*" onchange="previewImg(this)" style="display:none">
-        <button class="btn-action" onclick="document.getElementById('file-input').click()">📸 CARGAR FOTO</button>
-        <button id="btn-validate" class="btn-action" style="background:var(--accent); color:black; display:none" onclick="validarEvidencia()">VALIDAR</button>
+        <button class="btn-action" onclick="document.getElementById('file-input').click()">📸 TOMAR FOTO</button>
+        <button id="btn-validate" class="btn-action" style="background:var(--accent); color:black; display:none" onclick="validarEvidencia()">CONFIRMAR</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -62,7 +60,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
     <script>
-        // FIREBASE CONFIG (Tus credenciales de Uniandes)
+        // Configuración Firebase (Tus datos de Los Andes)
         const firebaseConfig = {
             apiKey: "AIzaSyBkhSSJf--g82qC5JzJ6Eo8T2TndoZG2XY",
             authDomain: "eas---terranova.firebaseapp.com",
@@ -109,30 +107,38 @@
             }
         }
 
-        // LÓGICA DE ESCÁNER SOLICITADA
         async function predictCam() {
             const prediction = await model.predict(webcam.canvas);
             let top = { className: "", probability: 0 };
             prediction.forEach(p => { if(p.probability > top.probability) top = p; });
 
             const label = document.getElementById("res-label");
+            
+            let color = "#666";
+            let canecaTexto = "";
 
-            // Si es Desconocido, funciona como "limpiador" inmediato
-            if (top.className === "Desconocidos") {
-                label.innerHTML = `<span style="color:gray">Buscando residuo...</span>`;
-            } 
-            else {
-                let caneca = "";
-                let color = "";
-                if (top.className === "Aprovechables") { caneca = "⬜ CANECA BLANCA"; color = "#333"; }
-                else if (top.className === "No aprovechables") { caneca = "⬛ CANECA NEGRA"; color = "black"; }
-                else if (top.className === "Orgánicos") { caneca = "🟩 CANECA VERDE"; color = "green"; }
-
-                label.innerHTML = `
-                    <div style="color: ${color}; font-size: 1.6rem;">${caneca}</div>
-                    <div style="font-size: 1rem; color: #666;">${(top.probability * 100).toFixed(0)}% de seguridad</div>
-                `;
+            // Lógica de clasificación visual
+            if (top.className === "Aprovechables") {
+                canecaTexto = "⬜ CANECA BLANCA";
+                color = "#222";
+            } else if (top.className === "No aprovechables") {
+                canecaTexto = "⬛ CANECA NEGRA";
+                color = "black";
+            } else if (top.className === "Orgánicos") {
+                canecaTexto = "🟩 CANECA VERDE";
+                color = "green";
+            } else if (top.className === "Desconocidos") {
+                canecaTexto = "❌ NO SE RECONOCIÓ EL RESIDUO";
+                color = "#d93025"; // Rojo para indicar que no es válido
             }
+
+            // Mostrar resultado con porcentaje siempre visible
+            label.innerHTML = `
+                <div style="color: ${color}; font-size: 1.4rem; margin-bottom: 5px;">${canecaTexto}</div>
+                <div style="font-size: 1rem; color: #777; font-weight: normal;">
+                    Seguridad: ${(top.probability * 100).toFixed(0)}%
+                </div>
+            `;
         }
 
         function stopWebcam() { if(webcam) webcam.stop(); showView('view-inicio'); }
@@ -157,15 +163,17 @@
             let top = { className: "", probability: 0 };
             prediction.forEach(p => { if(p.probability > top.probability) top = p; });
 
-            if (top.className === "Desconocidos" || top.probability < 0.80) {
-                alert("❌ No se reconoce un residuo válido.");
-            } else {
+            if (top.className === "Desconocidos") {
+                alert("❌ No se puede validar: El objeto no es un residuo reconocido.");
+            } else if (top.probability > 0.80) {
                 puntos += 10;
                 localStorage.setItem('terra_pts_v4', puntos);
                 document.getElementById("puntos-val").innerText = puntos;
                 db.collection("ranking").add({ residuo: top.className, fecha: new Date(), puntos: 10 });
-                alert(`✅ +10 Puntos: ${top.className}`);
+                alert(`✅ ¡Excelente! Clasificado como ${top.className}. Ganaste 10 puntos.`);
                 showView('view-inicio');
+            } else {
+                alert("⚠️ La imagen no es clara. Por favor intenta de nuevo.");
             }
         }
     </script>
